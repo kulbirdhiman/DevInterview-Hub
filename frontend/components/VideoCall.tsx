@@ -5,7 +5,7 @@ import { io, Socket } from "socket.io-client";
 
 type Props = { roomId: string };
 
-const SIGNALING_URL = "http://localhost:5000"; // your backend
+const SIGNALING_URL = "http://localhost:5000"; 
 
 export default function VideoCall({ roomId }: Props) {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
