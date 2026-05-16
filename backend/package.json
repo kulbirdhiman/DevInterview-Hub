@@ -4,9 +4,9 @@
   "description": "Interview platform backend (TS + Express + WebRTC signaling)",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",

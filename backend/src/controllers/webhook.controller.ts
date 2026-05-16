@@ -6,21 +6,33 @@ export const handleClerkWebhook = async (req: Request, res: Response) => {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET!;
 
   if (!WEBHOOK_SECRET) {
-    return res.status(500).json({ error: 'Webhook secret not configured' });
+    return res.status(500).json({
+      error: 'Webhook secret not configured',
+    });
   }
 
-  const svix = new Webhook(WEBHOOK_SECRET);
-  const payload = JSON.stringify(req.body);
-  const headers = req.headers as any;
-
   try {
-    const evt = svix.verify(payload, {
-      'svix-id': headers['svix-id'],
-      'svix-timestamp': headers['svix-timestamp'],
-      'svix-signature': headers['svix-signature'],
-    }) as any;
+    const payload = req.body.toString();
 
-    const { id, email_addresses, first_name, last_name, image_url, username } = evt.data;
+    const headers = {
+      'svix-id': req.headers['svix-id'] as string,
+      'svix-timestamp': req.headers['svix-timestamp'] as string,
+      'svix-signature': req.headers['svix-signature'] as string,
+    };
+
+    const wh = new Webhook(WEBHOOK_SECRET);
+
+    const evt: any = wh.verify(payload, headers);
+
+    const {
+      id,
+      email_addresses,
+      first_name,
+      last_name,
+      image_url,
+      username,
+    } = evt.data;
+
     const eventType = evt.type;
 
     switch (eventType) {
@@ -39,19 +51,32 @@ export const handleClerkWebhook = async (req: Request, res: Response) => {
           },
           { upsert: true, new: true }
         );
+
+        console.log('User synced');
+
         break;
 
       case 'user.deleted':
-        await User.findOneAndDelete({ clerkId: id });
+        await User.findOneAndDelete({
+          clerkId: id,
+        });
+
+        console.log('User deleted');
+
         break;
 
       default:
         console.log(`Unhandled event type: ${eventType}`);
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true,
+    });
   } catch (err: any) {
     console.error('Webhook verification failed:', err.message);
-    return res.status(400).json({ error: 'Invalid webhook signature' });
+
+    return res.status(400).json({
+      error: 'Invalid webhook signature',
+    });
   }
 };

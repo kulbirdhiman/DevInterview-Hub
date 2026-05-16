@@ -6,7 +6,7 @@ import { clerkMiddleware, requireAuth } from '@clerk/express';
 
 import webhookRoutes from './routes/webhook.routes';
 // Import other routes here later
-// import userRoutes from './routes/user.routes';
+import userRoutes from './routes/user.routes';
 
 const app = express();
 
@@ -77,6 +77,10 @@ mongoose.connect(process.env.MONGODB_URI!)
 
 // ====================== START SERVER ======================
 const PORT = process.env.PORT || 5000;
+
+//routes
+app.use('/api/users', userRoutes);
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
