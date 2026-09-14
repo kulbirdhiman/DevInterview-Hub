@@ -1,0 +1,30 @@
+# Development overlay: hot reload + source bind mounts.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# After changing package.json, add --renew-anon-volumes so the container
+# reinstalls dependencies instead of reusing the old node_modules volume.
+services:
+  backend:
+    image: devinterview-hub-backend:dev
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./backend:/app
+      # Anonymous volumes shield the image's Linux-native installs from the
+      # bind mount above. Refresh them with --renew-anon-volumes after any
+      # package.json change.
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    image: devinterview-hub-frontend:dev
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev

@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------
+   Design tokens. One accent (emerald), one neutral family (zinc),
+   one radius scale. Both light and dark are defined here so the
+   page never inherits a half-themed surface.
+   --------------------------------------------------------------- */
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #18181b;
 }
 
 @theme inline {
@@ -10,17 +16,45 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Single accent, locked for the whole page. */
+  --color-accent: #10b981;
+  --color-accent-soft: #34d399;
+
+  /* One radius scale: cards 16px, controls pill. */
+  --radius-card: 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #09090b;
+    --foreground: #fafafa;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Anchor links land below the fixed nav instead of under it. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
