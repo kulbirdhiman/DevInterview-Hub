@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth, useUser } from '@clerk/nextjs'
-import { FileText, ChatsCircle, VideoCamera, ArrowRight } from '@phosphor-icons/react'
+import { FileText, Scan, Layout, ArrowRight } from '@phosphor-icons/react'
 import { apiFetch, errorMessage, type Stats } from '@/lib/api'
 import { PageHeader, card, ErrorNote, Badge } from '@/components/dashboard/ui'
 
@@ -11,23 +11,23 @@ const steps = [
   {
     href: '/dashboard/resume',
     icon: FileText,
-    title: 'Build your resume',
-    body: 'Describe your background in plain words. Claude turns it into structured resume sections you can edit.',
-    cta: 'Open resumes',
+    title: 'Add your resume',
+    body: 'Paste your current resume or write rough career notes. We turn it into a clear starting point.',
+    cta: 'Analyze my resume',
   },
   {
-    href: '/dashboard/prep',
-    icon: ChatsCircle,
-    title: 'Practise the questions',
-    body: 'Generate a question set for the role you want, answer in your own words, and get scored feedback.',
-    cta: 'Start prep',
+    href: '/dashboard/resume',
+    icon: Scan,
+    title: 'Find what is missing',
+    body: 'See practical suggestions for stronger impact statements, skills, and role alignment.',
+    cta: 'View suggestions',
   },
   {
-    href: '/interview',
-    icon: VideoCamera,
-    title: 'Run a live room',
-    body: 'Take it into the shared editor with video when you are ready for a real or mock interview.',
-    cta: 'Open room',
+    href: '/dashboard/resume',
+    icon: Layout,
+    title: 'Choose a template',
+    body: 'Use a polished layout, tailor it for each role, and export a version you feel good sending.',
+    cta: 'Explore templates',
   },
 ]
 
@@ -49,8 +49,8 @@ export default function DashboardOverview() {
 
   const tiles = [
     { label: 'Resumes', value: stats?.resumeCount ?? null },
-    { label: 'Prep sessions', value: stats?.sessionCount ?? null },
-    { label: 'Questions answered', value: stats?.questionsAnswered ?? null },
+    { label: 'Suggestions applied', value: stats?.questionsAnswered ?? null },
+    { label: 'Templates used', value: stats?.sessionCount ?? null },
     {
       label: 'Average score',
       value: stats?.averageScore ?? null,
@@ -62,7 +62,7 @@ export default function DashboardOverview() {
     <>
       <PageHeader
         title={`Welcome back${user?.firstName ? `, ${user.firstName}` : ''}`}
-        description="Three steps: get your resume in shape, practise the questions you are likely to be asked, then run the real thing in a live room."
+      description="Build a resume that tells your story clearly, then improve it with focused suggestions for the roles you want."
       />
 
       {error && (
@@ -95,7 +95,7 @@ export default function DashboardOverview() {
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-          Your workflow
+          Your resume workflow
         </h2>
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
           {steps.map(({ href, icon: Icon, title, body, cta }, i) => (
