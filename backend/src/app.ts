@@ -5,8 +5,11 @@ import mongoose from 'mongoose';
 import { clerkMiddleware, requireAuth } from '@clerk/express';
 
 import webhookRoutes from './routes/webhook.routes';
-// Import other routes here later
 import userRoutes from './routes/user.routes';
+import resumeRoutes from './routes/resume.routes';
+import prepRoutes from './routes/prep.routes';
+import healthRoutes from './routes/health.routes';
+import { isAiConfigured } from './services/ai.service';
 
 const app = express();
 
@@ -30,6 +33,14 @@ app.use(clerkMiddleware());
 
 // Webhook Route (Clerk)
 app.use('/api/webhooks', webhookRoutes);
+
+// Health probe used by the Docker healthcheck and uptime checks.
+app.use('/api/health', healthRoutes);
+
+// Lets the dashboard show a setup banner instead of failing on first use.
+app.get('/api/ai/status', (req, res) => {
+  res.json({ success: true, configured: isAiConfigured() });
+});
 
 // Public Route
 app.get('/', (req, res) => {
@@ -80,6 +91,8 @@ const PORT = process.env.PORT || 5000;
 
 //routes
 app.use('/api/users', userRoutes);
+app.use('/api/resumes', resumeRoutes);
+app.use('/api/prep', prepRoutes);
 
 
 app.listen(PORT, () => {

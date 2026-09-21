@@ -4,7 +4,10 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
-import { BracketsAngle } from '@phosphor-icons/react'
+import { BracketsAngle, SquaresFour } from '@phosphor-icons/react'
+
+const ctaClass =
+  'whitespace-nowrap rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-emerald-500 active:scale-[0.98] dark:bg-emerald-400 dark:text-zinc-950 dark:hover:bg-emerald-300'
 
 const links = [
   { href: '#why', label: 'Why it works' },
@@ -69,24 +72,28 @@ export default function LandingNav() {
           {!isLoaded && <div aria-hidden className="h-9 w-40" />}
 
           {isLoaded && !isSignedIn && (
-            <SignInButton mode="modal">
-              <button className="hidden rounded-full px-4 py-2 text-sm text-zinc-600 transition-colors hover:text-zinc-950 sm:block dark:text-zinc-400 dark:hover:text-zinc-50">
-                Sign in
-              </button>
-            </SignInButton>
+            <>
+              <SignInButton mode="modal">
+                <button className="hidden rounded-full px-4 py-2 text-sm text-zinc-600 transition-colors hover:text-zinc-950 sm:block dark:text-zinc-400 dark:hover:text-zinc-50">
+                  Sign in
+                </button>
+              </SignInButton>
+              <Link href="/interview" className={ctaClass}>
+                Start interviewing
+              </Link>
+            </>
           )}
 
-          {isLoaded && (
-            <Link
-              href="/interview"
-              className="whitespace-nowrap rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-emerald-500 active:scale-[0.98] dark:bg-emerald-400 dark:text-zinc-950 dark:hover:bg-emerald-300"
-            >
-              Start interviewing
-            </Link>
-          )}
-
+          {/* Signed in, the CTA points at the dashboard instead of the sign-in
+              path the marketing copy assumes. */}
           {isLoaded && isSignedIn && (
-            <UserButton appearance={{ elements: { avatarBox: 'h-8 w-8 rounded-full' } }} />
+            <>
+              <Link href="/dashboard" className={`${ctaClass} inline-flex items-center gap-2`}>
+                <SquaresFour size={16} weight="bold" />
+                Dashboard
+              </Link>
+              <UserButton appearance={{ elements: { avatarBox: 'h-8 w-8 rounded-full' } }} />
+            </>
           )}
         </div>
       </nav>
