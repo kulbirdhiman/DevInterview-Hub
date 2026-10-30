@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { UserButton, useUser } from '@clerk/nextjs'
+import { UserButton, useUser, useAuth } from '@clerk/nextjs'
+import { apiFetch } from '@/lib/api'
 import {
   SquaresFour,
   FileText,
@@ -17,6 +18,9 @@ import {
 const links = [
   { href: '/dashboard', label: 'Overview', icon: SquaresFour },
   { href: '/dashboard/resume', label: 'Resume studio', icon: FileText },
+  { href: '/dashboard/prep', label: 'Interview practice', icon: Sparkle },
+  { href: '/dashboard/privacy', label: 'Usage & privacy', icon: GearSix },
+  { href: '/dashboard/ops', label: 'Operations', icon: SquaresFour },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
   { href: '/dashboard/settings', label: 'Account settings', icon: GearSix },
 ]
@@ -34,12 +38,12 @@ function Logo() {
   )
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ onNavigate, admin = false }: { onNavigate?: () => void; admin?: boolean }) {
   const pathname = usePathname()
 
   return (
     <nav className="flex flex-col gap-1">
-      {links.map(({ href, label, icon: Icon }) => {
+      {links.filter(link => link.href !== '/dashboard/ops' || admin).map(({ href, label, icon: Icon }) => {
         // Overview must match exactly or every child route lights it up.
         const active =
           href === '/dashboard' ? pathname === href : pathname.startsWith(href)
@@ -83,6 +87,13 @@ function UserFooter() {
 
 export default function DashboardSidebar() {
   const [open, setOpen] = useState(false)
+  const [admin, setAdmin] = useState(false)
+  const { getToken } = useAuth()
+  useEffect(() => {
+    let canceled = false
+    apiFetch<{ admin: boolean }>('/api/capabilities', getToken).then(data => { if (!canceled) setAdmin(data.admin) }).catch(() => {})
+    return () => { canceled = true }
+  }, [getToken])
 
   // The drawer sits above the page, so the body behind it must not scroll.
   useEffect(() => {
@@ -109,7 +120,7 @@ export default function DashboardSidebar() {
           <Logo />
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-2">
-          <NavLinks />
+          <NavLinks admin={admin} />
         </div>
         <UserFooter />
       </aside>
@@ -148,7 +159,7 @@ export default function DashboardSidebar() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-2">
-              <NavLinks onNavigate={() => setOpen(false)} />
+              <NavLinks admin={admin} onNavigate={() => setOpen(false)} />
             </div>
             <UserFooter />
           </div>

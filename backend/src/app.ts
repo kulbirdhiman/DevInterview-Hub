@@ -11,9 +11,15 @@ import userRoutes from './routes/user.routes';
 import resumeRoutes from './routes/resume.routes';
 import prepRoutes from './routes/prep.routes';
 import healthRoutes from './routes/health.routes';
+import platformRoutes from './platform/routes';
+import { observe, rateLimit, activeAccount, errors } from './platform/observability';
+import { startWorker } from './platform/worker';
+
 import { isAiConfigured } from './services/ai.service';
 
 const app = express();
+app.disable('x-powered-by');
+app.use(observe);
 
 // ====================== MIDDLEWARE ======================
 app.use(cors({
@@ -25,7 +31,7 @@ app.use(cors({
 app.use('/api/webhooks', express.raw({ type: 'application/json' }));
 
 // Normal JSON parser for all other routes
-app.use(express.json());
+app.use(express.json({ limit: '128kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Clerk Middleware - This adds `req.auth`
@@ -51,6 +57,8 @@ app.get('/', (req, res) => {
     message: 'Express + Clerk + MongoDB Backend is running!' 
   });
 });
+
+app.use('/api', rateLimit, activeAccount);
 
 // Protected Routes
 app.get('/api/me', requireUser, async (req, res) => {
@@ -84,10 +92,6 @@ app.get('/api/protected', requireUser, (req, res) => {
 });
 
 // ====================== DATABASE CONNECTION ======================
-mongoose.connect(process.env.MONGODB_URI!)
-  .then(() => console.log('✅ MongoDB Connected Successfully'))
-  .catch((err) => console.error('❌ MongoDB Connection Error:', err));
-
 // ====================== START SERVER ======================
 const PORT = process.env.PORT || 5000;
 
@@ -97,7 +101,18 @@ app.use('/api/resumes', resumeRoutes);
 app.use('/api/prep', prepRoutes);
 
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`✅ Clerk Auth Middleware Active`);
-});
+app.use('/api', platformRoutes);
+app.use(errors);
+
+async function start() {
+  await mongoose.connect(process.env.MONGODB_URI!);
+  // Build unique indexes before accepting work or claiming background tasks.
+  await Promise.all(mongoose.modelNames().map(name => mongoose.model(name).init()));
+  const stopWorker = startWorker();
+  const server = app.listen(PORT, () => console.log(JSON.stringify({ event: 'server_ready', port: PORT })));
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => {
+    stopWorker(); server.close(() => { void mongoose.disconnect().finally(() => process.exit(0)); });
+    setTimeout(() => process.exit(1), 15000).unref();
+  });
+}
+start().catch(() => { console.error(JSON.stringify({ event: 'startup_failed', code: 'DEPENDENCY_UNAVAILABLE' })); process.exit(1); });

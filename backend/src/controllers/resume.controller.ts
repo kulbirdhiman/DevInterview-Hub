@@ -2,6 +2,10 @@ import { getAuth } from '@clerk/express';
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
+import { QuotaError, reserve, settle, releaseResumeSlot, type Reservation } from '../platform/quota';
+import { assertActiveOwner } from '../platform/lifecycle';
+import { Analysis, Task } from '../platform/models';
 import { Resume } from '../models/resume.model';
 import { User } from '../models/user.model';
 import { generateResume, MissingApiKeyError } from '../services/ai.service';
@@ -10,7 +14,7 @@ import { MAX_VERSIONS, restoreRequestSchema, resumeContentSchema, resumeSnapshot
 const owner = (req: Request) => ({ _id: req.params.id, clerkId: getAuth(req).userId });
 const missing = (res: Response) => res.status(404).json({ success: false, message: 'Resume not found' });
 const invalid = (res: Response, error: z.ZodError) => res.status(422).json({ success: false, message: error.issues[0].message, issues: error.issues });
-const failed = (res: Response) => res.status(503).json({ success: false, message: 'Could not access your resume. Please retry.' });
+const failed = (res: Response, error?: unknown) => (error as { status?: number })?.status === 403 ? res.status(403).json({ message: 'This account is unavailable.' }) : error instanceof QuotaError ? res.status(429).json({ message: error.message }) : res.status(503).json({ success: false, message: 'Could not access your resume. Please retry.' });
 const conflict = (res: Response) => res.status(409).json({ success: false, message: 'This resume changed in another tab. Download your draft, then reload the saved resume before continuing.' });
 
 export const listResumes = async (req: Request, res: Response) => {
@@ -30,10 +34,20 @@ export const getResume = async (req: Request, res: Response) => {
 export const createResume = async (req: Request, res: Response) => {
   const parsed = resumeContentSchema.safeParse(req.body);
   if (!parsed.success) return invalid(res, parsed.error);
+  const key = req.get('Idempotency-Key') || randomUUID(), userId = getAuth(req).userId!;
+  if (!z.string().uuid().safeParse(key).success) return res.status(422).json({ message: 'Invalid idempotency key.' });
+  let slot: Reservation | undefined;
   try {
-    const resume = await Resume.create({ ...parsed.data, clerkId: getAuth(req).userId! });
+    const existing = await Resume.findOne({ clerkId: userId, creationOperation: key });
+    if (existing) return res.json({ resume: existing });
+    if (await Resume.countDocuments({ clerkId: userId }) >= 1) throw new QuotaError('active resume');
+    slot = await reserve(userId, 'resumeSlots', key);
+    if (!slot.fresh) return res.status(409).json({ message: 'Resume creation is already in progress. Reload your resumes.' });
+    const resume = await Resume.create({ ...parsed.data, clerkId: userId, creationOperation: key });
+    await assertActiveOwner(userId, () => Resume.deleteOne({ _id: resume._id }));
+    await settle(slot, 'consumed');
     return res.status(201).json({ success: true, resume });
-  } catch { return failed(res); }
+  } catch (error) { if (slot?.fresh) await settle(slot, 'released'); return failed(res, error); }
 };
 
 const generationSchema = z.object({
@@ -46,19 +60,30 @@ const generationSchema = z.object({
 export const createResumeWithAI = async (req: Request, res: Response) => {
   const parsed = generationSchema.safeParse(req.body);
   if (!parsed.success) return invalid(res, parsed.error);
+  const userId = getAuth(req).userId!, key = req.get('Idempotency-Key') || randomUUID();
+  if (!z.string().uuid().safeParse(key).success) return res.status(422).json({ message: 'Invalid idempotency key.' });
+  let slot: Reservation | undefined, ai: Reservation | undefined;
   try {
-    const userId = getAuth(req).userId!;
+    const existing = await Resume.findOne({ clerkId: userId, creationOperation: key });
+    if (existing) return res.json({ resume: existing });
+    if (await Resume.countDocuments({ clerkId: userId }) >= 1) throw new QuotaError('active resume');
+    slot = await reserve(userId, 'resumeSlots', key);
+    if (!slot.fresh) return res.status(409).json({ message: 'Resume generation is already in progress. Reload your resumes.' });
+    ai = await reserve(userId, 'resumeAI', key);
     const input = parsed.data;
     const user = await User.findOne({ clerkId: userId });
-    const generated = await generateResume({ rawInput: input.rawInput, targetRole: input.targetRole,
+    const generated = await generateResume({ rawInput: input.rawInput, targetRole: input.targetRole, owner: userId, operationKey: key,
       profile: { firstName: user?.firstName ?? undefined, lastName: user?.lastName ?? undefined, email: user?.email ?? undefined } });
     const content = resumeContentSchema.parse({ ...generated, targetRole: input.targetRole,
       title: input.title || `${input.targetRole || 'My'} resume`, presentation: input.presentation });
-    const resume = await Resume.create({ ...content, clerkId: userId, rawInput: input.rawInput, generatedByAI: true });
+    const resume = await Resume.create({ ...content, clerkId: userId, creationOperation: key, rawInput: input.rawInput, generatedByAI: true });
+    await assertActiveOwner(userId, () => Resume.deleteOne({ _id: resume._id }));
+    await settle(slot, 'consumed'); await settle(ai, 'consumed');
     return res.status(201).json({ success: true, resume });
   } catch (error) {
-    if (error instanceof MissingApiKeyError) return res.status(503).json({ success: false, message: error.message });
-    return res.status(503).json({ success: false, message: 'Could not generate your resume. You can create a blank resume or retry.' });
+    if (slot?.fresh) await settle(slot, 'released'); if (ai?.fresh) await settle(ai, 'released');
+    if (error instanceof MissingApiKeyError) return res.status(503).json({ message: error.message });
+    return failed(res, error);
   }
 };
 
@@ -128,6 +153,11 @@ export const restoreVersion = async (req: Request, res: Response) => {
 export const deleteResume = async (req: Request, res: Response) => {
   try {
     const deleted = await Resume.findOneAndDelete(owner(req));
-    return deleted ? res.json({ success: true }) : missing(res);
+    if (!deleted) return missing(res);
+    const analyses = await Analysis.find({ owner: getAuth(req).userId!, resumeId: deleted._id }).select('_id');
+    await Task.deleteMany({ owner: getAuth(req).userId!, resourceId: { $in: analyses.map(item => String(item._id)) } });
+    await Analysis.deleteMany({ owner: getAuth(req).userId!, resumeId: deleted._id });
+    await releaseResumeSlot(getAuth(req).userId!);
+    return res.json({ success: true });
   } catch { return failed(res); }
 };

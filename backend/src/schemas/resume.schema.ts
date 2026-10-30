@@ -19,7 +19,7 @@ const fields = z.object({
   achievements: z.array(z.object({ id, title: text(), description: text(2000), date: text(60) }).strict()).max(20).default([]),
   customSections: z.array(z.object({ id: z.string().uuid(), title: z.string().min(1).max(80), body: text(4000) }).strict()).max(5).default([]),
   sectionOrder: z.array(z.string().max(80)).max(12).default([...coreSections]),
-  presentation: z.object({ template: z.enum(['classic', 'modern', 'minimal']).default('classic'), font: z.enum(['sans', 'serif', 'mono']).default('sans'), fontSize: z.enum(['small', 'medium', 'large']).default('medium'), spacing: z.enum(['compact', 'comfortable', 'spacious']).default('comfortable'), color: z.enum(['slate', 'emerald', 'blue', 'burgundy']).default('emerald') }).strict().default({ template: 'classic', font: 'sans', fontSize: 'medium', spacing: 'comfortable', color: 'emerald' }),
+  presentation: z.object({ template: z.enum(['ats', 'minimal', 'developer', 'classic', 'modern']).default('ats'), font: z.enum(['sans', 'serif', 'mono']).default('sans'), fontSize: z.enum(['small', 'medium', 'large']).default('medium'), spacing: z.enum(['compact', 'comfortable', 'spacious']).default('comfortable'), color: z.enum(['slate', 'emerald', 'blue', 'burgundy']).default('emerald') }).strict().default({ template: 'ats', font: 'sans', fontSize: 'medium', spacing: 'comfortable', color: 'emerald' }),
 }).strict();
 
 export const resumeContentSchema = fields.superRefine((value, context) => {

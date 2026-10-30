@@ -5,7 +5,7 @@ export const sectionLabels: Record<string, string> = {
   summary: 'Summary', experience: 'Experience', projects: 'Projects', skills: 'Skills',
   education: 'Education', certifications: 'Certifications', achievements: 'Achievements',
 }
-export const defaultPresentation: ResumeContent['presentation'] = { template: 'classic', font: 'sans', fontSize: 'medium', spacing: 'comfortable', color: 'emerald' }
+export const defaultPresentation: ResumeContent['presentation'] = { template: 'ats', font: 'sans', fontSize: 'medium', spacing: 'comfortable', color: 'emerald' }
 const defaultContact: ResumeContent['contact'] = { email: '', phone: '', location: '', website: '', linkedin: '', github: '' }
 
 /** Normalize older saved resumes without rewriting their content. */
@@ -18,7 +18,7 @@ export function resumeContent(resume: Partial<ResumeContent>): ResumeContent {
     experience: resume.experience ?? [], projects: resume.projects ?? [], education: resume.education ?? [],
     certifications: resume.certifications ?? [], achievements: resume.achievements ?? [], customSections,
     sectionOrder: resume.sectionOrder?.length ? resume.sectionOrder : [...coreSections, ...customSections.map(section => `custom:${section.id}`)],
-    presentation: { ...defaultPresentation, ...resume.presentation },
+    presentation: { ...defaultPresentation, ...resume.presentation, template: resume.presentation?.template === 'classic' ? 'ats' : resume.presentation?.template === 'modern' ? 'developer' : resume.presentation?.template ?? 'ats' },
   }
 }
 export function normalizeResume(resume: Resume): Resume {

@@ -10,7 +10,7 @@ test('legacy resume normalization retains every existing core field and supplies
   assert.deepEqual(snapshot.skills, ['TypeScript']);
   assert.equal(snapshot.experience[0].bullets[0], 'Built internal tools');
   assert.deepEqual(snapshot.sectionOrder, coreSections);
-  assert.equal(snapshot.presentation.template, 'classic');
+  assert.equal(snapshot.presentation.template, 'ats');
   assert.equal('clerkId' in snapshot, false);
   assert.equal('rawInput' in snapshot, false);
 });
