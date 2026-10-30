@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const experienceSchema = new mongoose.Schema(
   {
+    id: String,
     company: String,
     role: String,
     start: String,
@@ -13,6 +14,7 @@ const experienceSchema = new mongoose.Schema(
 
 const projectSchema = new mongoose.Schema(
   {
+    id: String,
     name: String,
     description: String,
     tech: { type: [String], default: [] },
@@ -23,6 +25,7 @@ const projectSchema = new mongoose.Schema(
 
 const educationSchema = new mongoose.Schema(
   {
+    id: String,
     school: String,
     degree: String,
     year: String,
@@ -48,6 +51,21 @@ const resumeSchema = new mongoose.Schema({
   projects: { type: [projectSchema], default: [] },
   education: { type: [educationSchema], default: [] },
 
+  contact: { type: mongoose.Schema.Types.Mixed, default: () => ({ email: '', phone: '', location: '', website: '', linkedin: '', github: '' }) },
+  certifications: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  achievements: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  customSections: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  sectionOrder: { type: [String], default: () => ['summary', 'experience', 'projects', 'skills', 'education', 'certifications', 'achievements'] },
+  presentation: { type: mongoose.Schema.Types.Mixed, default: () => ({ template: 'classic', font: 'sans', fontSize: 'medium', spacing: 'comfortable', color: 'emerald' }) },
+  revision: { type: Number, default: 0 },
+  versionCount: { type: Number, default: 0 },
+  versions: { type: [new mongoose.Schema({
+    label: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    sourceRevision: { type: Number, required: true },
+    schemaVersion: { type: Number, default: 1 },
+    snapshot: { type: mongoose.Schema.Types.Mixed, required: true },
+  })], default: [], select: false },
   generatedByAI: { type: Boolean, default: false },
 
   createdAt: { type: Date, default: Date.now },
