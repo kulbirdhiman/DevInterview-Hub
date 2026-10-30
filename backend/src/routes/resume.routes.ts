@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '@clerk/express';
+import { requireUser } from '../middleware/user-auth';
 import {
   listResumes,
   getResume,
@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.use(requireAuth());
+router.use(requireUser);
 
 router.get('/', listResumes);
 router.post('/generate', createResumeWithAI);

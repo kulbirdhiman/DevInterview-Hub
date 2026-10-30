@@ -11,12 +11,14 @@ import {
   Sparkle,
   List,
   X,
+  GearSix,
 } from '@phosphor-icons/react'
 
 const links = [
   { href: '/dashboard', label: 'Overview', icon: SquaresFour },
   { href: '/dashboard/resume', label: 'Resume studio', icon: FileText },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
+  { href: '/dashboard/settings', label: 'Account settings', icon: GearSix },
 ]
 
 function Logo() {

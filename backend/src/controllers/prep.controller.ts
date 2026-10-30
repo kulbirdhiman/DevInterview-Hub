@@ -1,3 +1,4 @@
+import { getAuth } from '@clerk/express';
 import { Request, Response } from 'express';
 import { PrepSession } from '../models/prep.model';
 import { Resume } from '../models/resume.model';
@@ -9,7 +10,7 @@ import {
 
 export const listSessions = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const sessions = await PrepSession.find({ clerkId: userId }).sort({
       updatedAt: -1,
     });
@@ -22,7 +23,7 @@ export const listSessions = async (req: Request, res: Response) => {
 
 export const getSession = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const session = await PrepSession.findOne({
       _id: req.params.id,
       clerkId: userId,
@@ -43,7 +44,7 @@ const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];
 /** Builds a practice question set with Claude, optionally grounded in a resume. */
 export const createSession = async (req: Request, res: Response) => {
   try {
-    const userId = req.auth!.userId!;
+    const userId = getAuth(req).userId!;
     const { targetRole, stack, difficulty, count, resumeId } = req.body as {
       targetRole?: string;
       stack?: string[];
@@ -116,7 +117,7 @@ export const createSession = async (req: Request, res: Response) => {
 /** Saves an answer and asks Claude to review it. */
 export const answerQuestion = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const { answer } = req.body as { answer?: string };
 
     const session = await PrepSession.findOne({
@@ -167,7 +168,7 @@ export const answerQuestion = async (req: Request, res: Response) => {
 
 export const deleteSession = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const deleted = await PrepSession.findOneAndDelete({
       _id: req.params.id,
       clerkId: userId,
@@ -185,7 +186,7 @@ export const deleteSession = async (req: Request, res: Response) => {
 /** Counts for the dashboard overview. */
 export const getStats = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const [resumeCount, sessions] = await Promise.all([
       Resume.countDocuments({ clerkId: userId }),
       PrepSession.find({ clerkId: userId }),

@@ -1,3 +1,4 @@
+import { getAuth } from '@clerk/express';
 import { Request, Response } from 'express';
 import { Resume } from '../models/resume.model';
 import { User } from '../models/user.model';
@@ -5,7 +6,7 @@ import { generateResume, MissingApiKeyError } from '../services/ai.service';
 
 export const listResumes = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const resumes = await Resume.find({ clerkId: userId }).sort({ updatedAt: -1 });
     return res.json({ success: true, resumes });
   } catch (error) {
@@ -16,7 +17,7 @@ export const listResumes = async (req: Request, res: Response) => {
 
 export const getResume = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const resume = await Resume.findOne({ _id: req.params.id, clerkId: userId });
     if (!resume) {
       return res.status(404).json({ success: false, message: 'Resume not found' });
@@ -31,7 +32,7 @@ export const getResume = async (req: Request, res: Response) => {
 /** Generates resume content with Claude, then persists it. */
 export const createResumeWithAI = async (req: Request, res: Response) => {
   try {
-    const userId = req.auth!.userId!;
+    const userId = getAuth(req).userId!;
     const { rawInput, targetRole, title } = req.body as {
       rawInput?: string;
       targetRole?: string;
@@ -82,7 +83,7 @@ export const createResumeWithAI = async (req: Request, res: Response) => {
 
 export const updateResume = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const editable = [
       'title',
       'targetRole',
@@ -117,7 +118,7 @@ export const updateResume = async (req: Request, res: Response) => {
 
 export const deleteResume = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.auth!;
+    const { userId } = getAuth(req);
     const deleted = await Resume.findOneAndDelete({
       _id: req.params.id,
       clerkId: userId,

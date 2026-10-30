@@ -19,7 +19,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Calls the Express API with the caller's Clerk token attached.
+ * Calls the API with the caller's Clerk token attached.
  * `getToken` comes from Clerk's useAuth() so this stays usable from any
  * client component without reaching for a global.
  */
@@ -29,6 +29,7 @@ export async function apiFetch<T>(
   init: RequestInit = {}
 ): Promise<T> {
   const token = await getToken()
+  if (!token) throw new ApiError('Sign in to continue.', 401)
 
   const res = await fetch(`${BASE}${path}`, {
     ...init,
@@ -39,10 +40,9 @@ export async function apiFetch<T>(
     },
   })
 
-  // Clerk answers an unauthenticated API call with a 302 to its sign-in page.
-  // fetch follows that, so a "successful" response can still be HTML. Treat
-  // anything that is not JSON as a failure rather than handing the caller a
-  // body it will destructure into undefined.
+  // A misconfigured proxy or an older API deployment may redirect to HTML.
+  // Treat non-JSON responses as failures instead of accepting a sign-in page
+  // as a successful API response.
   const isJson = res.headers
     .get('content-type')
     ?.toLowerCase()
@@ -131,6 +131,16 @@ export type Stats = {
 }
 
 export type Profile = {
+  displayName: string
+  education: string
+  experienceLevel: '' | 'student' | 'fresher' | 'early-career' | 'experienced'
+  targetRole: string
+  targetIndustry: string
+  careerGoals: string
+  interviewLanguage: 'English' | 'Hindi'
+  salaryMin: number | null
+  salaryMax: number | null
+  salaryCurrency: 'INR' | 'USD' | 'EUR' | 'GBP'
   bio: string
   skills: string[]
   github: string
@@ -139,4 +149,12 @@ export type Profile = {
   firstName?: string
   lastName?: string
   email?: string
+  onboardingCompletedAt?: string | null
+}
+
+export const emptyProfile: Profile = {
+  displayName: '', education: '', experienceLevel: '', targetRole: '',
+  targetIndustry: '', careerGoals: '', interviewLanguage: 'English',
+  salaryMin: null, salaryMax: null, salaryCurrency: 'INR', skills: [],
+  bio: '', github: '', linkedin: '', portfolio: '',
 }
