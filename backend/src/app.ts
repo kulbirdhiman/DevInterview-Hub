@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import { clerkMiddleware, requireAuth } from '@clerk/express';
+import { clerkMiddleware, getAuth } from '@clerk/express';
+
+import { requireUser } from './middleware/user-auth';
 
 import webhookRoutes from './routes/webhook.routes';
 import userRoutes from './routes/user.routes';
@@ -51,9 +53,9 @@ app.get('/', (req, res) => {
 });
 
 // Protected Routes
-app.get('/api/me', requireAuth(), async (req, res) => {
+app.get('/api/me', requireUser, async (req, res) => {
   try {
-    const { userId } = req.auth;
+    const { userId } = getAuth(req);
 
     // You can fetch user from your database
     // const user = await User.findOne({ clerkId: userId });
@@ -70,8 +72,8 @@ app.get('/api/me', requireAuth(), async (req, res) => {
 });
 
 // Example of another protected route
-app.get('/api/protected', requireAuth(), (req, res) => {
-  const { userId, sessionId } = req.auth;
+app.get('/api/protected', requireUser, (req, res) => {
+  const { userId, sessionId } = getAuth(req);
   
   res.json({
     success: true,
