@@ -27,7 +27,7 @@ export default function ResumePreview({ content }: { content: ResumeContent }) {
     }
   }
   return <article id="resume-preview" style={style} className="resume-preview min-h-[700px] [overflow-wrap:anywhere] rounded-sm border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm sm:p-10 print:border-0 print:p-0 print:shadow-none">
-    <header className={theme.template === 'modern' ? 'border-l-4 border-[var(--resume-accent)] pl-5' : theme.template === 'minimal' ? '' : 'border-b-2 border-[var(--resume-accent)] pb-5'}>
+    <header className={['modern', 'developer'].includes(theme.template) ? 'border-l-4 border-[var(--resume-accent)] pl-5' : theme.template === 'minimal' ? '' : 'border-b-2 border-[var(--resume-accent)] pb-5'}>
       <h2 className="text-[2em] leading-tight font-bold">{content.fullName || 'Your name'}</h2>
       {content.headline && <p className="mt-2 text-[1.15em] text-[var(--resume-accent)]">{content.headline}</p>}
       <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[0.88em]">{[content.contact.email, content.contact.phone, content.contact.location].filter(Boolean).map((value, index) => <span key={index}>{value}</span>)}</p>

@@ -7,6 +7,7 @@ const loadIdentity = (id: string) => clerkClient.users.getUser(id);
 
 export async function ensureUser(clerkId: string, readIdentity = loadIdentity) {
   const existing = await User.findOne({ clerkId });
+  if (existing?.status === 'deleting' || existing?.status === 'deleted') throw Object.assign(new Error('Account unavailable'), { status: 403 });
   if (existing) return existing;
 
   const identity = await readIdentity(clerkId);

@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { apiFetch, errorMessage, type Resume, type ResumeContent, type ResumeVersion } from '@/lib/api'
+import { apiFetch, downloadFile, errorMessage, type Resume, type ResumeContent, type ResumeVersion } from '@/lib/api'
 import { sectionLabels } from '@/lib/resume/content'
 import { useResumeDraft } from '@/lib/resume/useResumeDraft'
 import ResumePreview from '@/components/resume/ResumePreview'
+import ResumeAnalysisPanel from '@/components/analysis/ResumeAnalysisPanel'
 import SectionEditor from '@/components/resume/SectionEditor'
 import { Button, ErrorNote, Field, inputClass, card } from './ui'
 
@@ -23,6 +24,7 @@ export default function ResumeView({ resume, onBack, onSaved }: {
   const [versionLabel, setVersionLabel] = useState('')
   const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pageSize, setPageSize] = useState<'A4' | 'LETTER'>('A4')
   const [dragging, setDragging] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
 
@@ -81,6 +83,8 @@ export default function ResumeView({ resume, onBack, onSaved }: {
         <div className="flex flex-wrap items-center gap-3">
           <span role="status" className={`text-sm ${unavailable ? 'text-red-600 dark:text-red-300' : 'text-zinc-600 dark:text-zinc-400'}`}>{statusLabel}</span>
           <Button variant="secondary" disabled={busy || unavailable} onClick={() => void run(editor.persist)}>Save now</Button>
+          <label className="text-sm">Page size <select aria-label="PDF page size" className="rounded border border-zinc-300 bg-transparent p-2 dark:border-zinc-700" value={pageSize} onChange={e => setPageSize(e.target.value as 'A4' | 'LETTER')}><option>A4</option><option value="LETTER">Letter</option></select></label>
+          <Button disabled={busy || unavailable} onClick={() => void run(async () => { await editor.persist(); await downloadFile(`/api/resumes/${resume._id}/pdf`, getToken, { expectedRevision: editor.revision.current, pageSize }, 'resume.pdf') })}>Download PDF</Button>
           <Button variant="secondary" onClick={editor.downloadDraft}>Download draft JSON</Button>
           <Button variant="secondary" disabled={busy || editor.dirty || unavailable} onClick={() => { setMobileTab('preview'); window.setTimeout(() => window.print(), 50) }}>Print preview</Button>
         </div>
@@ -139,13 +143,14 @@ export default function ResumeView({ resume, onBack, onSaved }: {
           <legend className="px-1 font-semibold">Layout and style</legend>
           <p className="text-sm text-zinc-500">Layout changes preserve every section. Choose from the supported settings below.</p>
           {([
-            ['template', 'Template', ['classic', 'modern', 'minimal']],
+            ['template', 'Template', ['ats', 'minimal', 'developer']],
             ['font', 'Font family', ['sans', 'serif', 'mono']],
             ['fontSize', 'Text size', ['small', 'medium', 'large']],
             ['spacing', 'Section spacing', ['compact', 'comfortable', 'spacious']],
             ['color', 'Accent color', ['slate', 'emerald', 'blue', 'burgundy']],
-          ] as const).map(([key, title, choices]) => <Field key={key} label={title}><select className={inputClass} value={draft.presentation[key]} onChange={e => update(d => ({ ...d, presentation: { ...d.presentation, [key]: e.target.value } }))}>{choices.map(choice => <option key={choice} value={choice}>{choice[0].toUpperCase() + choice.slice(1)}</option>)}</select></Field>)}
+          ] as const).map(([key, title, choices]) => <Field key={key} label={title}><select className={inputClass} value={draft.presentation[key]} onChange={e => update(d => ({ ...d, presentation: { ...d.presentation, [key]: e.target.value } }))}>{choices.map(choice => <option key={choice} value={choice}>{choice === 'ats' ? 'ATS-friendly' : choice[0].toUpperCase() + choice.slice(1)}</option>)}</select></Field>)}
         </fieldset>
+        <ResumeAnalysisPanel resumeId={resume._id} revision={editor.meta.revision} flush={editor.persist} getRevision={() => editor.revision.current} />
         <section className={`${card} space-y-4 p-5`}>
           <h2 className="font-semibold">Saved versions</h2>
           <p className="text-sm text-zinc-500">Keep up to 30 immutable checkpoints. Restoring adds a checkpoint of your current draft first.</p>
@@ -154,7 +159,7 @@ export default function ResumeView({ resume, onBack, onSaved }: {
           {versionError && <><ErrorNote>{versionError}</ErrorNote><Button variant="secondary" onClick={() => void loadVersions()}>Retry history</Button></>}
           {!versionsLoaded && !versionError && <p role="status">Loading history…</p>}
           {versionsLoaded && !versions.length && <p className="text-sm text-zinc-500">No saved versions yet. Autosave keeps your current draft.</p>}
-          <ul className="space-y-3">{versions.map(version => <li key={version._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 p-3 dark:border-zinc-700"><div className="min-w-0"><p className="break-words text-sm font-medium">{version.label}</p><p className="text-xs text-zinc-500">{new Date(version.createdAt).toLocaleString()} · revision {version.sourceRevision}</p></div><Button variant="secondary" disabled={busy || unavailable || editor.meta.versionCount >= 30} onClick={() => void restore(version)}>Restore</Button></li>)}</ul>
+          <ul className="space-y-3">{versions.map(version => <li key={version._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200 p-3 dark:border-zinc-700"><div className="min-w-0"><p className="break-words text-sm font-medium">{version.label}</p><p className="text-xs text-zinc-500">{new Date(version.createdAt).toLocaleString()} · revision {version.sourceRevision}</p></div><div className="flex gap-2"><Button variant="secondary" disabled={busy} onClick={() => void run(() => downloadFile(`/api/resumes/${resume._id}/pdf`, getToken, { versionId: version._id, expectedRevision: editor.revision.current, pageSize }, 'resume-version.pdf'))}>PDF</Button><Button variant="secondary" disabled={busy || unavailable || editor.meta.versionCount >= 30} onClick={() => void restore(version)}>Restore</Button></div></li>)}</ul>
         </section>
       </div>
       <div className={`resume-preview-column min-w-0 lg:sticky lg:top-6 ${mobileTab === 'edit' ? 'hidden lg:block' : ''}`}>

@@ -10,9 +10,9 @@ Open Resume studio at `/dashboard/resume`. Create a blank resume without an AI k
 - Summary, skills, experience (including individual responsibility/impact bullets), projects, education, certifications and achievements.
 - Up to five titled custom text sections.
 - Entry creation/removal and keyboard entry movement; section dragging and keyboard up/down controls. Contact details remain fixed at the top. Empty sections are omitted from preview.
-- Classic/Modern/Minimal layout, Sans/Serif/Mono fonts, three text sizes, three spacing presets and four accent colors. Content remains independent from presentation.
+- ATS-friendly/Minimal/Developer layouts (legacy Classic/Modern aliases preserved), Sans/Serif/Mono fonts, three text sizes, three spacing presets and four accent colors. Content remains independent from presentation.
 
-Preview updates locally while typing. On narrow screens the editor provides Edit/Preview controls; desktop uses side-by-side columns. Existing browser print is retained for a clean preview printout; this slice does not implement server-side PDF generation.
+Preview updates locally while typing. On narrow screens the editor provides Edit/Preview controls; desktop uses side-by-side columns. Existing browser print is retained for a clean preview printout; server-side PDF downloads were subsequently added in the remaining Phase 1 work (see PHASE_1_FEATURES.md).
 
 ## Saving and recovery
 

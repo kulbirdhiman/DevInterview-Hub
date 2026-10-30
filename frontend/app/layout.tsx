@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'DevInterview Hub',
   description:
-    'Run technical interviews with a shared code editor and video in one browser tab.',
+    'Build truthful resumes, export PDFs, and practice resume-aware interviews with evidence-based feedback.',
 }
 
 export default function RootLayout({

@@ -36,6 +36,7 @@ const educationSchema = new mongoose.Schema(
 const resumeSchema = new mongoose.Schema({
   clerkId: { type: String, required: true, index: true },
 
+  creationOperation: String,
   title: { type: String, default: 'Untitled resume' },
   targetRole: { type: String, default: '' },
 
@@ -56,7 +57,7 @@ const resumeSchema = new mongoose.Schema({
   achievements: { type: [mongoose.Schema.Types.Mixed], default: [] },
   customSections: { type: [mongoose.Schema.Types.Mixed], default: [] },
   sectionOrder: { type: [String], default: () => ['summary', 'experience', 'projects', 'skills', 'education', 'certifications', 'achievements'] },
-  presentation: { type: mongoose.Schema.Types.Mixed, default: () => ({ template: 'classic', font: 'sans', fontSize: 'medium', spacing: 'comfortable', color: 'emerald' }) },
+  presentation: { type: mongoose.Schema.Types.Mixed, default: () => ({ template: 'ats', font: 'sans', fontSize: 'medium', spacing: 'comfortable', color: 'emerald' }) },
   revision: { type: Number, default: 0 },
   versionCount: { type: Number, default: 0 },
   versions: { type: [new mongoose.Schema({
@@ -75,5 +76,7 @@ const resumeSchema = new mongoose.Schema({
 resumeSchema.pre('save', function () {
   this.updatedAt = new Date();
 });
+
+resumeSchema.index({ clerkId: 1, creationOperation: 1 }, { unique: true, partialFilterExpression: { creationOperation: { $type: 'string' } } });
 
 export const Resume = mongoose.model('Resume', resumeSchema);

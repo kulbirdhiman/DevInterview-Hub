@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { Webhook } from 'svix';
 import { z } from 'zod';
+import { requestDeletion } from '../platform/lifecycle';
 import { User } from '../models/user.model';
 
 const userEventSchema = z.object({
@@ -37,6 +38,7 @@ export const handleClerkWebhook = async (req: Request, res: Response) => {
   const { type, data } = parsed.data;
   try {
     if (type === 'user.created' || type === 'user.updated') {
+      if (await User.exists({ clerkId: data.id, status: { $in: ['deleting', 'deleted'] } })) return res.json({ success: true });
       const email = data.email_addresses?.find(address => address.id === data.primary_email_address_id);
       if (!email) return res.status(422).json({ error: 'Primary email required' });
       await User.findOneAndUpdate({ clerkId: data.id }, {
@@ -47,7 +49,7 @@ export const handleClerkWebhook = async (req: Request, res: Response) => {
         $setOnInsert: { clerkId: data.id },
       }, { upsert: true, new: true, runValidators: true });
     } else if (type === 'user.deleted') {
-      await User.findOneAndDelete({ clerkId: data.id });
+      await requestDeletion(data.id);
     }
     return res.json({ success: true });
   } catch {

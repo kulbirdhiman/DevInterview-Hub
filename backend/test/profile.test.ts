@@ -145,8 +145,10 @@ test('signed webhook selects the primary email and never overwrites career prefe
   const { handleClerkWebhook } = await import('../src/controllers/webhook.controller');
   const oldSecret = process.env.CLERK_WEBHOOK_SECRET;
   const originalUpdate = User.findOneAndUpdate;
+  const originalExists = User.exists;
   const secret = `whsec_${Buffer.from('unit-test-signing-secret-only').toString('base64')}`;
   process.env.CLERK_WEBHOOK_SECRET = secret;
+  User.exists = (() => Promise.resolve(null)) as any;
   try {
     const payload = JSON.stringify({ type: 'user.updated', data: {
       id: 'candidate-a', primary_email_address_id: 'primary', first_name: 'Asha',
@@ -175,6 +177,7 @@ test('signed webhook selects the primary email and never overwrites career prefe
     assert.equal(writes, 1);
   } finally {
     User.findOneAndUpdate = originalUpdate;
+    User.exists = originalExists;
     if (oldSecret === undefined) delete process.env.CLERK_WEBHOOK_SECRET;
     else process.env.CLERK_WEBHOOK_SECRET = oldSecret;
   }
