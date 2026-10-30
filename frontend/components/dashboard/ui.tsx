@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { cloneElement, isValidElement, useId, type ReactNode } from 'react'
 import { Warning, SpinnerGap } from '@phosphor-icons/react'
 
 export const card =
@@ -73,14 +73,21 @@ export function Field({
   hint?: string
   children: ReactNode
 }) {
+  const generatedId = useId()
+  const control = isValidElement<{ id?: string; 'aria-describedby'?: string }>(children) ? children : null
+  const id = control?.props.id ?? generatedId
+  const hintId = `${generatedId}-hint`
   return (
-    <label className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
         {label}
-      </span>
-      {children}
-      {hint && <span className="text-sm text-zinc-600 dark:text-zinc-400">{hint}</span>}
-    </label>
+      </label>
+      {control ? cloneElement(control, {
+        id,
+        'aria-describedby': [control.props['aria-describedby'], hint ? hintId : undefined].filter(Boolean).join(' ') || undefined,
+      }) : children}
+      {hint && <span id={hintId} className="text-sm text-zinc-600 dark:text-zinc-400">{hint}</span>}
+    </div>
   )
 }
 

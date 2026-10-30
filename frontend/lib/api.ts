@@ -76,27 +76,39 @@ export async function apiFetch<T>(
 
 /* ---- Shapes returned by the API ---- */
 
-export type Resume = {
-  _id: string
+export type ResumePresentation = {
+  template: 'classic' | 'modern' | 'minimal'
+  font: 'sans' | 'serif' | 'mono'
+  fontSize: 'small' | 'medium' | 'large'
+  spacing: 'compact' | 'comfortable' | 'spacious'
+  color: 'slate' | 'emerald' | 'blue' | 'burgundy'
+}
+export type ResumeContent = {
   title: string
   targetRole: string
   fullName: string
   headline: string
   summary: string
+  contact: { email: string; phone: string; location: string; website: string; linkedin: string; github: string }
   skills: string[]
-  experience: {
-    company: string
-    role: string
-    start: string
-    end: string
-    bullets: string[]
-  }[]
-  projects: { name: string; description: string; tech: string[]; link: string }[]
-  education: { school: string; degree: string; year: string }[]
+  experience: { id?: string; company: string; role: string; start: string; end: string; bullets: string[] }[]
+  projects: { id?: string; name: string; description: string; tech: string[]; link: string }[]
+  education: { id?: string; school: string; degree: string; year: string }[]
+  certifications: { id?: string; name: string; issuer: string; date: string; link: string }[]
+  achievements: { id?: string; title: string; description: string; date: string }[]
+  customSections: { id: string; title: string; body: string }[]
+  sectionOrder: string[]
+  presentation: ResumePresentation
+}
+export type Resume = ResumeContent & {
+  _id: string
+  revision: number
+  versionCount: number
   generatedByAI: boolean
   createdAt: string
   updatedAt: string
 }
+export type ResumeVersion = { _id: string; label: string; createdAt: string; sourceRevision: number; schemaVersion: number }
 
 export type PrepQuestion = {
   _id: string

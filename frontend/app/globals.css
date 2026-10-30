@@ -58,3 +58,20 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Print only the resume preview, preserving the on-screen content order. */
+@media print {
+  @page { margin: 16mm; }
+  body:has(#resume-preview) { background: white; color: black; }
+  body:has(#resume-preview) aside,
+  body:has(#resume-preview) header.sticky,
+  .resume-editor-controls,
+  .resume-editor-form { display: none !important; }
+  body:has(#resume-preview) .lg\:pl-64 { padding-left: 0 !important; }
+  body:has(#resume-preview) main { max-width: none; padding: 0; }
+  .resume-editor-layout, .resume-preview-column { display: block !important; }
+  .resume-preview-column { position: static !important; }
+  #resume-preview { min-height: 0; border: 0; box-shadow: none; padding: 0; overflow-wrap: anywhere; }
+  #resume-preview a { color: inherit; }
+  #resume-preview h3 { break-after: avoid; }
+}
