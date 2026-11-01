@@ -2,7 +2,7 @@ import { Schema, model } from 'mongoose';
 
 const taskSchema = new Schema({
   _id: { type: String, required: true }, owner: { type: String, required: true, index: true },
-  type: { type: String, enum: ['analysis', 'interview_start', 'interview_answer', 'delete_account'], required: true },
+  type: { type: String, enum: ['career', 'analysis', 'interview_start', 'interview_answer', 'delete_account'], required: true },
   resourceId: { type: String, required: true }, revision: { type: Number, default: 0 },
   status: { type: String, enum: ['pending', 'running', 'completed', 'failed', 'canceled'], default: 'pending', index: true },
   attempts: { type: Number, default: 0 }, adminRetries: { type: Number, default: 0 },

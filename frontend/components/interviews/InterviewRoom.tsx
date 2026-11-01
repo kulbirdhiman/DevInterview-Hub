@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { apiFetch, errorMessage, type InterviewSession, type InterviewTurn } from '@/lib/api'
 import { Button, ErrorNote, Field, inputClass, card, Badge } from '@/components/dashboard/ui'
 import EvidenceDetails from '@/components/analysis/EvidenceDetails'
+import VoiceControls from './VoiceControls'
 import InterviewReport from './InterviewReport'
 
 export default function InterviewRoom({ initial, onBack }: { initial: InterviewSession; onBack: () => void }) {
@@ -78,6 +79,7 @@ function AnswerForm({ turn, session, disabled, onDirty, onAccepted }: { turn: In
     } catch (error) { setError(errorMessage(error)) } finally { setBusy(false) }
   }
   return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void submit(answer) }}>
+    <VoiceControls prompt={turn.prompt} language={session.language} disabled={disabled || busy} onTranscript={text => { setAnswer(current => `${current}${current ? " " : ""}${text}`.slice(0, 5000)); onDirty(true) }} />
     <Field label="Your answer" hint="Up to 5,000 characters. Submit when you have finished; the interviewer will wait."><textarea className={inputClass} rows={8} maxLength={5000} value={answer} disabled={disabled || busy} onChange={e => { setAnswer(e.target.value); onDirty(Boolean(e.target.value)) }} /></Field>
     {error && <ErrorNote>{error}</ErrorNote>}
     <div className="flex flex-wrap gap-3"><Button type="submit" loading={busy} disabled={disabled || !answer.trim()}>Submit answer</Button><Button type="button" variant="secondary" disabled={disabled || busy} onClick={() => void submit('')}>Skip question (no credit)</Button></div>

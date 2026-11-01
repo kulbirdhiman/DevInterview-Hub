@@ -1,7 +1,7 @@
 import { User } from '../models/user.model';
 import { UsageBucket } from './models';
 
-export const betaLimits = { resumeSlots: 1, resumeAI: 2, analysis: 3, interview: 2, pdf: 10, dataExport: 2, providerCalls: 40 } as const;
+export const betaLimits = { career: 8, resumeSlots: 1, resumeAI: 2, analysis: 3, interview: 2, pdf: 10, dataExport: 2, providerCalls: 40 } as const;
 export type Metric = keyof typeof betaLimits;
 export class QuotaError extends Error { status = 429; constructor(metric: string) { super(`Free beta ${metric} limit reached. Check Usage for your remaining allowance.`); } }
 

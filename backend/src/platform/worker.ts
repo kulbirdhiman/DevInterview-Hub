@@ -1,3 +1,4 @@
+import { CareerTask, processCareerTask } from './phase2';
 import { randomUUID } from 'node:crypto';
 import { Task, Analysis, Interview, UsageBucket } from './models';
 import { Resume } from '../models/resume.model';
@@ -14,6 +15,7 @@ export async function processTask(task: { _id: string; owner: string; type: stri
   if (task.type === 'delete_account') { await purgeAccount(task.owner); return; }
   if (await User.exists({ clerkId: task.owner, status: { $in: ['deleting', 'deleted'] } })) return;
   const attemptKey = `${task._id}:${task.adminRetries ?? 0}:${task.attempts}`;
+  if (task.type === 'career') { await processCareerTask(task); return; }
   if (task.type === 'analysis') {
     const analysis = await Analysis.findOne({ _id: task.resourceId, owner: task.owner, state: 'pending' });
     if (!analysis) return;
@@ -73,7 +75,10 @@ export async function processTask(task: { _id: string; owner: string; type: stri
 }
 
 async function failResource(task: { owner: string; type: string; resourceId: string; revision: number }, code: string) {
-  if (task.type === 'analysis') {
+  if (task.type === 'career') {
+    const item = await CareerTask.findOneAndUpdate({ _id: task.resourceId, owner: task.owner, state: 'pending' }, { $set: { state: 'failed' } });
+    if (item) await settleKey(task.owner, 'career', item.operationKey!, 'released');
+  } else if (task.type === 'analysis') {
     const report = await Analysis.findOneAndUpdate({ _id: task.resourceId, state: 'pending' }, { $set: { state: 'failed', errorCode: code } });
     if (report) await settleKey(task.owner, 'analysis', report.operationKey, 'released');
   } else if (task.type.startsWith('interview')) {
@@ -107,6 +112,8 @@ export async function workerTick() {
 }
 export async function reconcile() {
   await Task.updateMany({ status: { $in: ['completed', 'failed', 'canceled'] }, expiresAt: { $exists: false } }, { $set: { expiresAt: new Date(Date.now() + 7 * 86400000) } });
+  for (const item of await CareerTask.find({ state: 'pending' }).limit(100)) await enqueue({ _id: item.taskId!, owner: item.owner, type: 'career', resourceId: String(item._id) });
+  await CareerTask.deleteMany({ expiresAt: { $lt: new Date() } });
   const analyses = await Analysis.find({ state: 'pending' }).limit(100);
   for (const analysis of analyses) await enqueue({ _id: analysis.taskId!, owner: analysis.owner, type: 'analysis', resourceId: String(analysis._id) });
   const sessions = await Interview.find({ state: { $in: ['preparing', 'processing'] } }).limit(100);
@@ -118,7 +125,7 @@ export async function reconcile() {
   for (const bucket of stale) for (const entry of bucket.entries) {
     if (entry.state !== 'reserved' || !entry.createdAt || entry.createdAt.getTime() > Date.now() - 600000) continue;
     const key = entry.key!.slice(entry.metric!.length + 1);
-    const resource = entry.metric === 'analysis' ? await Analysis.exists({ owner: bucket.owner, operationKey: key }) : entry.metric === 'interview' ? await Interview.exists({ owner: bucket.owner, operationKey: key }) : ['resumeSlots', 'resumeAI'].includes(entry.metric!) ? await Resume.exists({ clerkId: bucket.owner, creationOperation: key }) : null;
+    const resource = entry.metric === 'career' ? await CareerTask.exists({ owner: bucket.owner, operationKey: key }) : entry.metric === 'analysis' ? await Analysis.exists({ owner: bucket.owner, operationKey: key }) : entry.metric === 'interview' ? await Interview.exists({ owner: bucket.owner, operationKey: key }) : ['resumeSlots', 'resumeAI'].includes(entry.metric!) ? await Resume.exists({ clerkId: bucket.owner, creationOperation: key }) : null;
     if (!resource) await settleKey(bucket.owner, entry.metric as import('./quota').Metric, key, 'released');
   }
   await Promise.all([Analysis.deleteMany({ expiresAt: { $lt: new Date() } }), Interview.deleteMany({ expiresAt: { $lt: new Date() } })]);

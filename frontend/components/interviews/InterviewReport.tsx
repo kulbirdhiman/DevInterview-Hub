@@ -1,3 +1,4 @@
+import ReportComparison from './ReportComparison'
 import type { InterviewSession } from '@/lib/api'
 import { card } from '@/components/dashboard/ui'
 
@@ -14,6 +15,7 @@ export default function InterviewReport({ session }: { session: InterviewSession
       {report.studyTopics.length > 0 && <><h3 className="font-semibold">Next practice topics</h3><ul className="list-disc space-y-1 pl-5">{report.studyTopics.map(topic => <li key={topic}>{topic}</li>)}</ul></>}
       <p className="text-sm text-zinc-500">{report.disclaimer}</p>
     </div>}
+    {session.state === 'completed' && <ReportComparison session={session} />}
     {session.turns.filter(turn => turn.answeredAt).map((turn, index) => <details key={turn._id} className={`${card} p-5`} open={session.state === 'completed'}>
       <summary className="cursor-pointer font-semibold">Answer {index + 1} · {turn.evaluation?.score == null ? 'Not assessed' : `${turn.evaluation.score}/100`}</summary>
       <h3 className="mt-4 font-medium">{turn.prompt}</h3><p className="mt-3 whitespace-pre-wrap rounded-xl bg-zinc-100 p-4 text-sm dark:bg-zinc-800">{turn.answer || 'Skipped — no answer provided.'}</p>

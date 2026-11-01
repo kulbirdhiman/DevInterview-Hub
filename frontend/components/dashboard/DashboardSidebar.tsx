@@ -19,6 +19,7 @@ const links = [
   { href: '/dashboard', label: 'Overview', icon: SquaresFour },
   { href: '/dashboard/resume', label: 'Resume studio', icon: FileText },
   { href: '/dashboard/prep', label: 'Interview practice', icon: Sparkle },
+  { href: '/dashboard/career', label: 'Career tools', icon: Sparkle },
   { href: '/dashboard/privacy', label: 'Usage & privacy', icon: GearSix },
   { href: '/dashboard/ops', label: 'Operations', icon: SquaresFour },
   { href: '/dashboard/profile', label: 'Profile', icon: User },
