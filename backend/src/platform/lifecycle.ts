@@ -1,3 +1,4 @@
+import { CareerTask } from './phase2';
 import { createHash } from 'node:crypto';
 import { clerkClient } from '@clerk/express';
 import { User } from '../models/user.model';
@@ -33,7 +34,7 @@ export async function assertActiveOwner(owner: string, cleanup?: () => Promise<u
 }
 export async function purgeAccount(owner: string) {
   await Promise.all([
-    Resume.deleteMany({ clerkId: owner }), PrepSession.deleteMany({ clerkId: owner }),
+    CareerTask.deleteMany({ owner }), Resume.deleteMany({ clerkId: owner }), PrepSession.deleteMany({ clerkId: owner }),
     Analysis.deleteMany({ owner }), Interview.deleteMany({ owner }), UsageBucket.deleteMany({ owner }), AiUsage.updateMany({ owner }, { $set: { owner: 'deleted' }, $unset: { taskId: '' } }),
     Task.deleteMany({ owner, type: { $ne: 'delete_account' } }),
   ]);

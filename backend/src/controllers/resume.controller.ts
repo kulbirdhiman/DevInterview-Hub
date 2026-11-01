@@ -1,3 +1,4 @@
+import { CareerTask } from '../platform/phase2';
 import { getAuth } from '@clerk/express';
 import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
@@ -154,6 +155,9 @@ export const deleteResume = async (req: Request, res: Response) => {
   try {
     const deleted = await Resume.findOneAndDelete(owner(req));
     if (!deleted) return missing(res);
+    const career = await CareerTask.find({ owner: getAuth(req).userId!, resumeId: deleted._id }).select('_id');
+    await Task.deleteMany({ owner: getAuth(req).userId!, resourceId: { $in: career.map(item => String(item._id)) } });
+    await CareerTask.deleteMany({ owner: getAuth(req).userId!, resumeId: deleted._id });
     const analyses = await Analysis.find({ owner: getAuth(req).userId!, resumeId: deleted._id }).select('_id');
     await Task.deleteMany({ owner: getAuth(req).userId!, resourceId: { $in: analyses.map(item => String(item._id)) } });
     await Analysis.deleteMany({ owner: getAuth(req).userId!, resumeId: deleted._id });

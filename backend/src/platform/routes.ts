@@ -1,3 +1,4 @@
+import { CareerTask } from './phase2';
 import { Router, type Request, type Response } from 'express';
 import { getAuth } from '@clerk/express';
 import mongoose, { type InferSchemaType } from 'mongoose';
@@ -83,7 +84,7 @@ router.get('/analyses/:id', async (req, res) => {
 
 router.post('/interviews', async (req, res) => {
   requireAI();
-  const input = validated(z.object({ resumeId: objectId, expectedRevision: revision, role: z.string().trim().min(1).max(120), category: z.enum(categories), difficulty: z.enum(levels), language: z.enum(['English', 'Hindi']).default('English'), durationMinutes: z.union([z.literal(5), z.literal(15)]).default(5) }).strict(), req.body);
+  const input = validated(z.object({ resumeId: objectId, expectedRevision: revision, role: z.string().trim().min(1).max(120), category: z.enum(categories), difficulty: z.enum(levels), language: z.enum(['English', 'Hindi']).default('English'), durationMinutes: z.union([z.literal(5), z.literal(15), z.literal(30), z.literal(60)]).default(5) }).strict(), req.body);
   const userId = owner(req), key = operationKey(req);
   const existing = await Interview.findOne({ owner: userId, operationKey: key });
   if (existing) return res.json({ session: publicInterview(existing.toObject()) });
@@ -94,7 +95,7 @@ router.post('/interviews', async (req, res) => {
   if (!resumeEvidence(snapshot).some(item => ['summary', 'experience', 'projects', 'skills', 'education'].includes(item.section) && !item.id.startsWith('missing:'))) return res.status(422).json({ message: 'Add skills, education, a summary or work/project details before starting an interview.' });
   const reservation = await reserve(userId, 'interview', key);
   if (!reservation.fresh) return stale(res);
-  const session = await Interview.create({ ...input, owner: userId, operationKey: key, resumeRevision: input.expectedRevision, resumeSnapshot: snapshot,
+  const session = await Interview.create({ ...input, maxQuestions: input.durationMinutes >= 30 ? 12 : 6, owner: userId, operationKey: key, resumeRevision: input.expectedRevision, resumeSnapshot: snapshot,
     taskId: taskKey(userId, 'interview', key), expiresAt: await expiration(userId) });
   await assertActiveOwner(userId, () => Interview.deleteOne({ _id: session._id }));
   await enqueue({ _id: session.taskId!, owner: userId, type: 'interview_start', resourceId: String(session._id), revision: 0 });
@@ -179,7 +180,7 @@ router.put('/account/preferences', async (req, res) => {
   const input = validated(z.object({ retentionDays: z.union([z.literal(30), z.literal(90), z.literal(180)]) }).strict(), req.body);
   const userId = owner(req);
   await User.updateOne({ clerkId: userId }, { $set: input });
-  for (const collection of [Analysis.collection, Interview.collection]) await collection.updateMany({ owner: userId }, [{ $set: { expiresAt: { $add: ['$createdAt', input.retentionDays * 86400000] } } }]);
+  for (const collection of [Analysis.collection, Interview.collection, CareerTask.collection]) await collection.updateMany({ owner: userId }, [{ $set: { expiresAt: { $add: ['$createdAt', input.retentionDays * 86400000] } } }]);
   res.json({ ...input, message: 'Retention updated. Expired analyses and interviews are removed by the next cleanup sweep.' });
 });
 router.post('/account/export', async (req, res) => {
@@ -198,7 +199,7 @@ router.post('/account/export', async (req, res) => {
     for (const [name, collection, query] of [
       ['profile', User, { clerkId: owner(req) }], ['resumes', Resume, { clerkId: owner(req) }],
       ['legacyPractice', PrepSession, { clerkId: owner(req) }], ['interviews', Interview, { owner: owner(req) }],
-      ['analyses', Analysis, { owner: owner(req) }], ['usage', UsageBucket, { owner: owner(req) }], ['aiUsage', AiUsage, { owner: owner(req) }], ['tasks', Task, { owner: owner(req) }], ['audit', Audit, { actor: owner(req) }],
+      ['career', CareerTask, { owner: owner(req) }], ['analyses', Analysis, { owner: owner(req) }], ['usage', UsageBucket, { owner: owner(req) }], ['aiUsage', AiUsage, { owner: owner(req) }], ['tasks', Task, { owner: owner(req) }], ['audit', Audit, { actor: owner(req) }],
     ] as const) {
       await write(`,${JSON.stringify(name)}:[`); let first = true;
       const cursor = collection.collection.find(query);
@@ -230,7 +231,8 @@ router.post('/ops/tasks/:id/retry', adminOnly, async (req, res) => {
   const id = validated(z.string().regex(/^[a-f\d]{64}$/), req.params.id);
   const task = await Task.findOne({ _id: id, status: 'failed', adminRetries: { $lt: 2 } });
   if (!task) return stale(res);
-  if (task.type === 'analysis') await Analysis.updateOne({ _id: task.resourceId, state: 'failed' }, { $set: { state: 'pending' } });
+  if (task.type === 'career') await CareerTask.updateOne({ _id: task.resourceId, state: 'failed' }, { $set: { state: 'pending' } });
+  else if (task.type === 'analysis') await Analysis.updateOne({ _id: task.resourceId, state: 'failed' }, { $set: { state: 'pending' } });
   else if (task.type.startsWith('interview')) await Interview.updateOne({ _id: task.resourceId, state: 'failed', revision: task.revision }, { $set: { state: task.type === 'interview_start' ? 'preparing' : 'processing' } });
   const changed = await Task.updateOne({ _id: id, status: 'failed', adminRetries: task.adminRetries }, { $set: { status: 'pending', attempts: 0 }, $inc: { adminRetries: 1 }, $unset: { expiresAt: '' } });
   if (!changed.modifiedCount) return stale(res);

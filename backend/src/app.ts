@@ -11,6 +11,7 @@ import userRoutes from './routes/user.routes';
 import resumeRoutes from './routes/resume.routes';
 import prepRoutes from './routes/prep.routes';
 import healthRoutes from './routes/health.routes';
+import careerRoutes from './platform/phase2';
 import platformRoutes from './platform/routes';
 import { observe, rateLimit, activeAccount, errors } from './platform/observability';
 import { startWorker } from './platform/worker';
@@ -101,6 +102,7 @@ app.use('/api/resumes', resumeRoutes);
 app.use('/api/prep', prepRoutes);
 
 
+app.use('/api', careerRoutes);
 app.use('/api', platformRoutes);
 app.use(errors);
 
